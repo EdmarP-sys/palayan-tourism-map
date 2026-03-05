@@ -22,6 +22,14 @@
             font-family: 'Inter', 'Segoe UI', sans-serif;
         }
 
+        body, #map {
+              background-color: transparent !important;
+             background: transparent !important;
+        }
+        .leaflet-container {
+              background: transparent !important;
+        }
+
         /* ── Hotel pin pulse animation ── */
         @keyframes hotelPulse {
             0%   { transform: scale(0.8); opacity: 0.9; }
@@ -226,9 +234,10 @@
         function style_boundary_administrative_palayancity_3_0() {
             return {
                 pane: 'pane_boundary_administrative_palayancity_3',
-                opacity: 1, color: '#2c3e50',
+                opacity: 1, 
+                color: '#F5A623', /* CHANGED: Gold border to pop against the dark theme */
                 dashArray: '7,5', lineCap: 'round', lineJoin: 'round',
-                weight: 2.5, fillOpacity: 0, interactive: false,
+                weight: 3.0, fillOpacity: 0, interactive: false,
             };
         }
         map.createPane('pane_boundary_administrative_palayancity_3');
@@ -242,11 +251,7 @@
         bounds_group.addLayer(layer_boundary_administrative_palayancity_3);
         map.addLayer(layer_boundary_administrative_palayancity_3);
 
-        // ── Difference_5: outside-city white mask ──────────────────────────
-        // Uses a dedicated SVG pane rendered ABOVE the tile panes but BELOW markers.
-        // A white SVG rect covers the whole world; the city polygon is cut out as a
-        // "hole" via pointer-events:none so clicks fall through to the map underneath.
-        // This approach works on all 3 basemaps (no blend-mode dependency).
+        // ── Difference_5: outside-city mask ──────────────────────────
         map.createPane('pane_Difference_5');
         map.getPane('pane_Difference_5').style.zIndex = 405;
         map.getPane('pane_Difference_5').style['mix-blend-mode'] = 'normal';
@@ -259,8 +264,8 @@
                     pane: 'pane_Difference_5',
                     stroke: false,
                     fill: true,
-                    fillOpacity: 1,
-                    fillColor: '#ffffff',
+                    fillOpacity: 1, 
+                    fillColor: '#0b1320', /* CHANGED: Matches the WordPress site's dark navy background */
                     interactive: false,
                 };
             },
