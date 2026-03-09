@@ -13,108 +13,368 @@
         <link rel="stylesheet" href="css/leaflet.photon.css">
         <link rel="stylesheet" href="css/leaflet-measure.css">
         <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
         <style>
-        *, *::before, *::after { box-sizing: border-box; }
-        html, body, #map {
+        /* ============================================================
+           BASE
+        ============================================================ */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
             width: 100%; height: 100%;
-            padding: 0; margin: 0;
-            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: #040d1a;
+            font-family: 'Outfit', sans-serif;
+        }
+        #map {
+            width: 100%; height: 100%;
+            background: #040d1a !important;
         }
 
-        body, #map {
-              background-color: transparent !important;
-             background: transparent !important;
-        }
-        .leaflet-container {
-              background: transparent !important;
+        /* ============================================================
+           PALETTE (mirrors tourism page)
+        ============================================================ */
+        :root {
+            --pt-red:   #f80605;
+            --pt-blue:  #163f82;
+            --pt-gold:  #e9ac09;
+            --pt-green: #348573;
+            --pt-ink:   #0d254c;
+            --pt-cream: #f2efc8;
+            --pt-text:  #1a2433;
+            --pt-muted: #536473;
         }
 
-        /* ── Hotel pin pulse animation ── */
-        @keyframes hotelPulse {
-            0%   { transform: scale(0.8); opacity: 0.9; }
-            100% { transform: scale(2.6); opacity: 0; }
+        /* ============================================================
+           MAP TILE BACKGROUND (areas outside Palayan boundary)
+        ============================================================ */
+        .leaflet-container { background: #040d1a !important; }
+
+        /* ============================================================
+           BRANDED HEADER BAR
+        ============================================================ */
+        #pm-header {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            z-index: 1200;
+            height: 54px;
+            background: linear-gradient(90deg, rgba(13,37,76,0.97) 0%, rgba(10,27,56,0.97) 100%);
+            border-bottom: 3px solid transparent;
+            border-image: linear-gradient(90deg, var(--pt-red), var(--pt-gold), var(--pt-green), var(--pt-blue)) 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.5);
+        }
+        #pm-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #pm-header-logo {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--pt-green), var(--pt-blue));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.9rem; color: white; flex-shrink: 0;
+        }
+        #pm-header-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1rem; font-weight: 700;
+            color: #fff; line-height: 1.1;
+        }
+        #pm-header-title span {
+            display: block;
+            font-size: 0.55rem; font-family: 'Outfit', sans-serif;
+            font-weight: 500; letter-spacing: 3px; text-transform: uppercase;
+            color: var(--pt-gold); margin-top: 1px;
+        }
+        #pm-header-live {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 0.62rem; font-weight: 600; letter-spacing: 1.5px;
+            text-transform: uppercase; color: rgba(255,255,255,0.7);
+        }
+        #pm-header-live-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: #4ade80;
+            animation: pmLivePulse 1.8s ease-in-out infinite;
+        }
+        @keyframes pmLivePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.6)} }
+
+        /* ============================================================
+           MAP AREA — pushed below header
+        ============================================================ */
+        #map { padding-top: 54px; }
+        .leaflet-top { top: 54px !important; }
+
+        /* ============================================================
+           CATEGORY FILTER PANEL
+        ============================================================ */
+        #pm-filter {
+            position: absolute;
+            top: 64px; right: 10px;
+            z-index: 1100;
+            background: rgba(10,20,46,0.97);
+            border: 1px solid rgba(233,172,9,0.25);
+            border-radius: 14px;
+            width: 220px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+            overflow: hidden;
+            backdrop-filter: blur(12px);
+        }
+        #pm-filter-header {
+            padding: 12px 14px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        #pm-filter-title {
+            font-size: 0.62rem; font-weight: 800; letter-spacing: 3px;
+            text-transform: uppercase; color: var(--pt-gold);
+        }
+        #pm-filter-toggle-all {
+            font-size: 0.6rem; font-weight: 700; color: rgba(255,255,255,0.45);
+            cursor: pointer; letter-spacing: 1px; text-transform: uppercase;
+            background: none; border: none; padding: 0; font-family: 'Outfit', sans-serif;
+            transition: color 0.2s;
+        }
+        #pm-filter-toggle-all:hover { color: var(--pt-gold); }
+
+        #pm-filter-body {
+            padding: 10px 0 8px;
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(233,172,9,0.3) transparent;
+        }
+        #pm-filter-body::-webkit-scrollbar { width: 4px; }
+        #pm-filter-body::-webkit-scrollbar-thumb { background: rgba(233,172,9,0.3); border-radius: 2px; }
+
+        .pm-cat-row {
+            display: flex; align-items: center; gap: 10px;
+            padding: 6px 14px;
+            cursor: pointer;
+            transition: background 0.15s;
+            user-select: none;
+        }
+        .pm-cat-row:hover { background: rgba(255,255,255,0.04); }
+
+        .pm-cat-icon {
+            width: 28px; height: 28px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.72rem; flex-shrink: 0;
+            transition: opacity 0.25s;
+        }
+        .pm-cat-label {
+            font-size: 0.8rem; font-weight: 500;
+            color: rgba(255,255,255,0.85); flex: 1;
+            transition: color 0.25s;
+        }
+        .pm-cat-check {
+            width: 16px; height: 16px; border-radius: 4px;
+            border: 1.5px solid rgba(255,255,255,0.2);
+            flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .pm-cat-check i { font-size: 0.55rem; color: white; display: none; }
+        .pm-cat-row.active .pm-cat-check {
+            border-color: var(--pt-gold); background: var(--pt-gold);
+        }
+        .pm-cat-row.active .pm-cat-check i { display: block; }
+        .pm-cat-row.inactive .pm-cat-icon { opacity: 0.35; }
+        .pm-cat-row.inactive .pm-cat-label { color: rgba(255,255,255,0.3); }
+
+        #pm-filter-footer {
+            padding: 9px 14px;
+            border-top: 1px solid rgba(255,255,255,0.07);
+            font-size: 0.6rem; color: rgba(255,255,255,0.25);
+            letter-spacing: 0.5px;
+            text-align: center;
         }
 
-        /* ── Zoom controls ── */
-        .leaflet-control-zoom { border: none !important; box-shadow: none !important; }
-        .leaflet-control-zoom a {
-            width: 34px !important; height: 34px !important; line-height: 34px !important;
-            border-radius: 8px !important; font-size: 18px !important;
-            color: #333 !important;
-            background: rgba(255,255,255,0.95) !important;
-            backdrop-filter: blur(8px) !important;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.14) !important;
-            border: 1px solid rgba(0,0,0,0.08) !important;
-            margin-bottom: 4px !important; display: block !important;
+        /* Collapse toggle button */
+        #pm-filter-collapse {
+            position: absolute;
+            top: 64px; right: 240px;
+            z-index: 1100;
+            width: 32px; height: 32px; border-radius: 8px;
+            background: rgba(10,20,46,0.97);
+            border: 1px solid rgba(233,172,9,0.25);
+            color: var(--pt-gold); font-size: 0.75rem;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+            transition: all 0.2s;
         }
-        .leaflet-control-zoom a:hover { background: #fff !important; color: #e74c3c !important; }
+        #pm-filter-collapse:hover { background: var(--pt-gold); color: var(--pt-ink); }
+        #pm-filter.collapsed { display: none; }
 
-        .leaflet-control-measure-toggle {
-            width: 34px !important; height: 34px !important; line-height: 34px !important;
-            border-radius: 8px !important; font-size: 14px !important;
-            color: #333 !important; background: rgba(255,255,255,0.95) !important;
-            backdrop-filter: blur(8px) !important;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.14) !important;
-            border: 1px solid rgba(0,0,0,0.08) !important;
+        /* ============================================================
+           CUSTOM MARKER ICONS (div-based, Font Awesome)
+        ============================================================ */
+        .pm-marker {
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.55);
+            border: 2px solid rgba(255,255,255,0.5);
+            transition: transform 0.2s;
         }
-        .leaflet-control-measure-toggle:hover { color: #e74c3c !important; background: #fff !important; }
+        .pm-marker i {
+            transform: rotate(45deg);
+            color: #fff;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+        }
+        .pm-marker:hover { transform: rotate(-45deg) scale(1.2); }
 
-        /* ── Layer tree panel ── */
-        .leaflet-control-layers,
-        .leaflet-control-layers-tree {
-            border-radius: 14px !important;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.14) !important;
-            background: rgba(255,255,255,0.97) !important;
-            backdrop-filter: blur(12px) !important;
-            border: 1px solid rgba(0,0,0,0.07) !important;
-            font-family: 'Inter', sans-serif !important;
-            font-size: 13px !important;
-            overflow: hidden !important;
-        }
-        .leaflet-control-layers-toggle,
-        .leaflet-control-layers-tree-toggle {
-            width: 36px !important; height: 36px !important;
-            border-radius: 10px !important;
-            background-color: rgba(255,255,255,0.95) !important;
-            background-size: 20px !important;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.14) !important;
-            border: 1px solid rgba(0,0,0,0.08) !important;
-        }
-        .leaflet-control-layers-expanded { padding: 14px 16px !important; min-width: 200px !important; }
-        .leaflet-control-layers label {
-            display: flex !important; align-items: center !important; gap: 8px !important;
-            padding: 5px 0 !important; cursor: pointer !important;
-            color: #333 !important; font-weight: 500 !important;
-        }
-        .leaflet-control-layers label:hover { color: #e74c3c !important; }
-        .leaflet-control-layers-separator { border-color: #f0f0f0 !important; margin: 6px 0 !important; }
-
-        /* ── Hotel popup card ── */
+        /* ============================================================
+           POPUP STYLES (tourism brand)
+        ============================================================ */
         .leaflet-popup-content-wrapper {
-            border-radius: 16px !important;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.18) !important;
+            background: rgba(10,20,46,0.97) !important;
+            border: 1px solid rgba(233,172,9,0.3) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.7) !important;
             padding: 0 !important;
-            overflow: hidden !important;
-            border: none !important;
+            overflow: hidden;
+            backdrop-filter: blur(12px);
         }
-        .leaflet-popup-content { margin: 0 !important; width: 100% !important; }
-        .leaflet-popup-tip { box-shadow: none !important; }
+        .leaflet-popup-tip { background: rgba(10,20,46,0.97) !important; }
+        .leaflet-popup-close-button {
+            color: rgba(255,255,255,0.4) !important;
+            font-size: 16px !important;
+            top: 8px !important; right: 10px !important;
+        }
+        .leaflet-popup-close-button:hover { color: var(--pt-gold) !important; }
+        .leaflet-popup-content {
+            margin: 0 !important;
+            font-family: 'Outfit', sans-serif !important;
+            color: rgba(255,255,255,0.85) !important;
+        }
 
-        /* ── Attribution ── */
-        .leaflet-control-attribution {
-            background: rgba(255,255,255,0.85) !important;
-            backdrop-filter: blur(4px) !important;
-            border-radius: 8px 0 0 0 !important;
-            font-size: 10px !important; padding: 3px 9px !important; color: #555 !important;
+        /* Popup inner styling */
+        .pm-popup {
+            min-width: 220px;
+            max-width: 300px;
         }
-        .leaflet-control-attribution a { color: #e74c3c !important; }
+        .pm-popup-header {
+            padding: 14px 16px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .pm-popup-icon {
+            width: 36px; height: 36px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; flex-shrink: 0;
+        }
+        .pm-popup-cat {
+            font-size: 0.58rem; font-weight: 800; letter-spacing: 2.5px;
+            text-transform: uppercase; color: var(--pt-gold);
+            display: block; margin-bottom: 2px;
+        }
+        .pm-popup-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 0.95rem; font-weight: 700; color: #fff;
+            line-height: 1.2;
+        }
+        .pm-popup-body { padding: 12px 16px 14px; }
+        .pm-popup-row {
+            display: flex; gap: 8px; margin-bottom: 7px;
+            font-size: 0.78rem; color: rgba(255,255,255,0.65);
+            align-items: flex-start;
+        }
+        .pm-popup-row:last-child { margin-bottom: 0; }
+        .pm-popup-row i { color: var(--pt-gold); margin-top: 2px; flex-shrink: 0; font-size: 0.7rem; }
+        .pm-popup-row a { color: var(--pt-gold); text-decoration: none; }
+        .pm-popup-row a:hover { text-decoration: underline; }
+        .pm-popup-img {
+            width: 100%; aspect-ratio: 16/9; object-fit: cover;
+            display: block; border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        /* old table-based popup fallback */
+        .leaflet-popup-content table { width: 100%; }
+        .leaflet-popup-content td {
+            padding: 4px 16px;
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.65);
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+
+        /* ============================================================
+           LEAFLET UI OVERRIDES
+        ============================================================ */
+        .leaflet-control-zoom a {
+            background: rgba(10,20,46,0.97) !important;
+            color: var(--pt-gold) !important;
+            border-color: rgba(233,172,9,0.2) !important;
+            font-size: 14px !important;
+        }
+        .leaflet-control-zoom a:hover {
+            background: var(--pt-gold) !important;
+            color: var(--pt-ink) !important;
+        }
+        .leaflet-control-attribution {
+            background: rgba(10,20,46,0.85) !important;
+            color: rgba(255,255,255,0.35) !important;
+            font-size: 9px !important;
+            border-top-left-radius: 6px;
+        }
+        .leaflet-control-attribution a { color: rgba(233,172,9,0.6) !important; }
+
+        /* Measure control */
+        .leaflet-control-measure { background: rgba(10,20,46,0.97) !important; border-color: rgba(233,172,9,0.2) !important; }
+        .leaflet-control-measure a { color: var(--pt-gold) !important; }
+
+        /* Hide default layer tree (we use custom panel) */
+        .leaflet-control-layers { display: none !important; }
         </style>
+
         <title>Palayan City Tourism Map</title>
     </head>
     <body>
+        <!-- ── BRANDED HEADER ── -->
+        <div id="pm-header">
+            <div id="pm-header-left">
+                <div id="pm-header-logo"><i class="fas fa-map-location-dot"></i></div>
+                <div id="pm-header-title">
+                    Palayan City Tourism
+                    <span>#ExperiencePalayan · Nueva Ecija</span>
+                </div>
+            </div>
+            <div id="pm-header-live">
+                <div id="pm-header-live-dot"></div>
+                Interactive Map
+            </div>
+        </div>
+
+        <!-- ── MAP CANVAS ── -->
         <div id="map"></div>
 
+        <!-- ── FILTER PANEL COLLAPSE BUTTON ── -->
+        <button id="pm-filter-collapse" title="Toggle category filter">
+            <i class="fas fa-layer-group"></i>
+        </button>
+
+        <!-- ── CATEGORY FILTER PANEL ── -->
+        <div id="pm-filter">
+            <div id="pm-filter-header">
+                <span id="pm-filter-title">Map Filters</span>
+                <button id="pm-filter-toggle-all">All On</button>
+            </div>
+            <div id="pm-filter-body">
+                
+                <div style="padding: 0 14px 12px; border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 8px;">
+                    <div style="font-size: 0.55rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Background Map</div>
+                    <div style="display: flex; gap: 6px;">
+                        <button id="btn-sat" style="flex: 1; padding: 6px; background: var(--pt-gold); color: var(--pt-ink); border: none; border-radius: 4px; font-family: 'Outfit'; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">Satellite</button>
+                        <button id="btn-str" style="flex: 1; padding: 6px; background: rgba(255,255,255,0.1); color: white; border: none; border-radius: 4px; font-family: 'Outfit'; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">Streets</button>
+                    </div>
+                </div>
+
+                </div>
+            <div id="pm-filter-footer">Palayan City Tourism Office &middot; 2026</div>
+        </div>
+
+        <!-- ── DATA LAYERS ── -->
         <script src="js/qgis2web_expressions.js"></script>
         <script src="js/leaflet.js"></script>
         <script src="js/L.Control.Layers.Tree.min.js"></script>
@@ -128,14 +388,106 @@
         <script src="js/labels.js"></script>
         <script src="js/leaflet.photon.js"></script>
         <script src="js/leaflet-measure.js"></script>
-        <script src="data/boundary_administrative_palayancity_3.js"></script>
-        <script src="data/Difference_5.js"></script>
-        <script src="data/Hotels_6.js"></script>
+        <script src="data/boundary_administrative_palayancity_1.js"></script>
+        <script src="data/Difference_2.js"></script>
+        <script src="data/Accommodations_3.js"></script>
+        <script src="data/Healthwellness_4.js"></script>
+        <script src="data/MICE_5.js"></script>
+        <script src="data/Motels_6.js"></script>
+        <script src="data/Culture_7.js"></script>
+        <script src="data/Resto_8.js"></script>
+        <script src="data/Bakeshop_9.js"></script>
+        <script src="data/Cafe_10.js"></script>
+        <script src="data/Restobar_11.js"></script>
+        <script src="data/Attraction_12.js"></script>
+        <script src="data/Resort_13.js"></script>
+        <script src="data/Hotels_14.js"></script>
 
         <script>
+        /* ============================================================
+           CATEGORY DEFINITIONS
+           Each category has: key (matches layer variable suffix),
+           label, FA icon class, pin color, icon bg color
+        ============================================================ */
+        var PM_CATS = [
+            { key:'Hotels_14',        label:'Hotels',           icon:'fa-bed',               pinColor:'#1a56db', iconBg:'rgba(26,86,219,0.25)'  },
+            { key:'Resort_13',        label:'Resorts',          icon:'fa-umbrella-beach',    pinColor:'#348573', iconBg:'rgba(52,133,115,0.25)'  },
+            { key:'Attraction_12',    label:'Attractions',      icon:'fa-mountain-sun',      pinColor:'#27ae60', iconBg:'rgba(39,174,96,0.25)'   },
+            { key:'Restobar_11',      label:'Restobars',        icon:'fa-martini-glass',     pinColor:'#8e44ad', iconBg:'rgba(142,68,173,0.25)'  },
+            { key:'Cafe_10',          label:'Cafes',            icon:'fa-mug-hot',           pinColor:'#a0522d', iconBg:'rgba(160,82,45,0.25)'   },
+            { key:'Bakeshop_9',       label:'Bakeshops',        icon:'fa-cake-candles',      pinColor:'#e91e63', iconBg:'rgba(233,30,99,0.25)'   },
+            { key:'Resto_8',          label:'Restaurants',      icon:'fa-utensils',          pinColor:'#f57c00', iconBg:'rgba(245,124,0,0.25)'   },
+            { key:'Culture_7',        label:'Culture & Heritage',icon:'fa-landmark',         pinColor:'#e9ac09', iconBg:'rgba(233,172,9,0.25)'   },
+            { key:'Motels_6',         label:'Motels & Inns',    icon:'fa-moon',              pinColor:'#607d8b', iconBg:'rgba(96,125,139,0.25)'  },
+            { key:'MICE_5',           label:'MICE Facilities',  icon:'fa-microphone-lines',  pinColor:'#00bcd4', iconBg:'rgba(0,188,212,0.25)'   },
+            { key:'Healthwellness_4', label:'Health & Wellness', icon:'fa-heart-pulse',      pinColor:'#f80605', iconBg:'rgba(248,6,5,0.25)'     },
+            { key:'Accommodations_3', label:'Accommodations',   icon:'fa-house',             pinColor:'#ff8f00', iconBg:'rgba(255,143,0,0.25)'   },
+        ];
+
+        /* ============================================================
+           HELPER: create a divIcon marker for a given category config
+        ============================================================ */
+        function pmMakeIcon(cat) {
+            var size = 36;
+            var html = [
+                '<div class="pm-marker" style="',
+                    'width:',size,'px;height:',size,'px;',
+                    'background:',cat.pinColor,';',
+                '">',
+                    '<i class="fas ',cat.icon,'" style="font-size:',Math.round(size*0.38),'px"></i>',
+                '</div>'
+            ].join('');
+            return L.divIcon({
+                html: html,
+                className: '',
+                iconSize:   [size, size],
+                iconAnchor: [size/2, size],
+                popupAnchor:[0, -(size + 4)]
+            });
+        }
+
+        /* ============================================================
+           HELPER: wrap popup content in branded template
+        ============================================================ */
+        function pmWrapPopup(rawTableHTML, cat) {
+            /* extract Bname from raw table if present */
+            var nameMatch = rawTableHTML.match(/<strong>Bname<\/strong><br \/>([^<]+)/);
+            var name = nameMatch ? nameMatch[1].trim() : '';
+            if (!name) {
+                /* fallback: grab first non-empty td content */
+                var tdMatch = rawTableHTML.match(/<td[^>]*>([^<]{3,})<\/td>/);
+                name = tdMatch ? tdMatch[1].trim() : cat.label;
+            }
+            return '<div class="pm-popup">' +
+                '<div class="pm-popup-header">' +
+                    '<div class="pm-popup-icon" style="background:' + cat.iconBg + ';color:' + cat.pinColor + '">' +
+                        '<i class="fas ' + cat.icon + '"></i>' +
+                    '</div>' +
+                    '<div>' +
+                        '<span class="pm-popup-cat">' + cat.label + '</span>' +
+                        '<div class="pm-popup-name">' + (name || cat.label) + '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="pm-popup-body">' + rawTableHTML + '</div>' +
+            '</div>';
+        }
+
+        /* ============================================================
+           MAP INIT — Google Satellite as default base
+        ============================================================ */
+        var highlightLayer;
+        function highlightFeature(e) {
+            highlightLayer = e.target;
+            highlightLayer.openPopup();
+        }
+
         var map = L.map('map', {
-            zoomControl: false, maxZoom: 28, minZoom: 1
-        }).setView([15.5000, 121.0800], 12);
+            zoomControl: false,
+            maxZoom: 28,
+            minZoom: 1,
+            preferCanvas: false,
+        }).fitBounds([[15.362308239675302, 120.89138150606864],
+                      [15.594022742001847, 121.35340451336995]]);
 
         var hash = new L.Hash(map);
         map.attributionControl.setPrefix(
@@ -143,9 +495,9 @@
             '<a href="https://leafletjs.com">Leaflet</a> &middot; ' +
             '<a href="https://qgis.org">QGIS</a>'
         );
-        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
 
-        // ── Popup helpers ─────────────────────────────────────────────────
+        var autolinker = new Autolinker({ truncate: { length: 30, location: 'smart' } });
+
         function removeEmptyRowsFromPopupContent(content, feature) {
             var tempDiv = document.createElement('div');
             tempDiv.innerHTML = content;
@@ -159,6 +511,7 @@
             }
             return tempDiv.innerHTML;
         }
+
         function addClassToPopupIfMedia(content, popup) {
             var tempDiv = document.createElement('div');
             tempDiv.innerHTML = content;
@@ -168,16 +521,11 @@
                 if (/\.(jpg|jpeg|png|gif|bmp|webp|avif)$/i.test(src)) {
                     popup._contentNode.classList.add('media');
                     setTimeout(function() { popup.update(); }, 10);
-                } else if (/\.(mp3|wav|ogg|aac)$/i.test(src)) {
-                    var audio = document.createElement('audio');
-                    audio.controls = true; audio.src = src;
-                    imgTd.parentNode.replaceChild(audio, imgTd);
-                    popup._contentNode.classList.add('media');
-                    setTimeout(function() { popup.setContent(tempDiv.innerHTML); popup.update(); }, 10);
                 } else if (/\.(mp4|webm|ogg|mov)$/i.test(src)) {
                     var video = document.createElement('video');
                     video.controls = true; video.src = src;
-                    video.style.cssText = 'width:400px;height:300px;max-height:60vh;max-width:60vw;';
+                    video.style.width = '400px'; video.style.height = '300px';
+                    video.style.maxHeight = '60vh'; video.style.maxWidth = '60vw';
                     imgTd.parentNode.replaceChild(video, imgTd);
                     popup._contentNode.classList.add('media');
                     video.addEventListener('loadedmetadata', function() { popup.update(); });
@@ -190,7 +538,7 @@
             }
         }
 
-        // ── Controls ──────────────────────────────────────────────────────
+        /* zoom + measure */
         L.control.zoom({ position: 'topleft' }).addTo(map);
         var measureControl = new L.Control.Measure({
             position: 'topleft',
@@ -204,172 +552,320 @@
         var bounds_group = new L.featureGroup([]);
         function setBounds() {}
 
-        // ── Basemap layers (only GoogleMaps active by default) ─────────────
-        map.createPane('pane_GoogleMaps_0');
-        map.getPane('pane_GoogleMaps_0').style.zIndex = 400;
-        var layer_GoogleMaps_0 = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-            pane: 'pane_GoogleMaps_0', opacity: 1.0, attribution: '',
-            minZoom: 1, maxZoom: 28, minNativeZoom: 0, maxNativeZoom: 21
-        });
-
-        map.createPane('pane_GoogleSatelliteHybrid_1');
-        map.getPane('pane_GoogleSatelliteHybrid_1').style.zIndex = 400;
-        var layer_GoogleSatelliteHybrid_1 = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-            pane: 'pane_GoogleSatelliteHybrid_1', opacity: 1.0, attribution: '',
-            minZoom: 1, maxZoom: 28, minNativeZoom: 0, maxNativeZoom: 19
-        });
+        /* ── GOOGLE SATELLITE (default, always on) ── */
+       /* ── BASE MAPS (Satellite Default, Streets Alternative) ── */
+        map.createPane('pane_BaseMap');
+        map.getPane('pane_BaseMap').style.zIndex = 400;
         
-
-        map.createPane('pane_GoogleSatellite_2');
-        map.getPane('pane_GoogleSatellite_2').style.zIndex = 400;
-        var layer_GoogleSatellite_2 = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-            pane: 'pane_GoogleSatellite_2', opacity: 1.0, attribution: '',
-            minZoom: 1, maxZoom: 28, minNativeZoom: 0, maxNativeZoom: 19
+        // 1. Initialize both map layers
+        var layer_GoogleSatellite_0 = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            pane: 'pane_BaseMap', opacity: 1.0, attribution: '', minZoom: 1, maxZoom: 28, minNativeZoom: 0, maxNativeZoom: 19
+        });
+        var layer_GoogleStreets = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            pane: 'pane_BaseMap', opacity: 1.0, attribution: '', minZoom: 1, maxZoom: 28, minNativeZoom: 0, maxNativeZoom: 19
         });
 
-        map.addLayer(layer_GoogleSatellite_2);
+        // 2. Set Satellite as the default visible map
+        map.addLayer(layer_GoogleSatellite_0);
 
-        // ── Admin Boundary (display only, no popup) ────────────────────────
-        function style_boundary_administrative_palayancity_3_0() {
-            return {
-                pane: 'pane_boundary_administrative_palayancity_3',
-                opacity: 1, 
-                color: '#F5A623', /* CHANGED: Gold border to pop against the dark theme */
-                dashArray: '7,5', lineCap: 'round', lineJoin: 'round',
-                weight: 3.0, fillOpacity: 0, interactive: false,
-            };
+        // 3. UI Toggle Button Logic
+        document.getElementById('btn-sat').addEventListener('click', function() {
+            map.addLayer(layer_GoogleSatellite_0);
+            map.removeLayer(layer_GoogleStreets);
+            // Style the active button gold
+            this.style.background = 'var(--pt-gold)';
+            this.style.color = 'var(--pt-ink)';
+            // Style the inactive button dark
+            document.getElementById('btn-str').style.background = 'rgba(255,255,255,0.1)';
+            document.getElementById('btn-str').style.color = 'white';
+        });
+
+        document.getElementById('btn-str').addEventListener('click', function() {
+            map.addLayer(layer_GoogleStreets);
+            map.removeLayer(layer_GoogleSatellite_0);
+            // Style the active button gold
+            this.style.background = 'var(--pt-gold)';
+            this.style.color = 'var(--pt-ink)';
+            // Style the inactive button dark
+            document.getElementById('btn-sat').style.background = 'rgba(255,255,255,0.1)';
+            document.getElementById('btn-sat').style.color = 'white';
+        });
+
+        /* ── BOUNDARY (administrative outline) ── */
+        function pop_boundary_administrative_palayancity_1(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup === 'function') layer.closePopup();
+                    else layer.eachLayer(function(f) { f.closePopup(); });
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>' +
+                '<tr><td colspan="2">' + (feature.properties['name'] !== null ? autolinker.link(String(feature.properties['name']).replace(/'/g,"'").toLocaleString()) : '') + '</td></tr>' +
+                '<tr><td colspan="2">' + (feature.properties['population'] !== null ? autolinker.link(String(feature.properties['population']).replace(/'/g,"'").toLocaleString()) : '') + '</td></tr>' +
+                '</table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+            layer.on('popupopen', function(e) { addClassToPopupIfMedia(content, e.popup); });
+            layer.bindPopup(content, { maxHeight: 400 });
         }
-        map.createPane('pane_boundary_administrative_palayancity_3');
-        map.getPane('pane_boundary_administrative_palayancity_3').style.zIndex = 403;
-        map.getPane('pane_boundary_administrative_palayancity_3').style['mix-blend-mode'] = 'normal';
-        var layer_boundary_administrative_palayancity_3 = new L.geoJson(json_boundary_administrative_palayancity_3, {
+        map.createPane('pane_boundary_administrative_palayancity_1');
+        map.getPane('pane_boundary_administrative_palayancity_1').style.zIndex = 401;
+        map.getPane('pane_boundary_administrative_palayancity_1').style['mix-blend-mode'] = 'normal';
+        var layer_boundary_administrative_palayancity_1 = new L.geoJson(json_boundary_administrative_palayancity_1, {
             attribution: '', interactive: false,
-            pane: 'pane_boundary_administrative_palayancity_3',
-            style: style_boundary_administrative_palayancity_3_0,
-        });
-        bounds_group.addLayer(layer_boundary_administrative_palayancity_3);
-        map.addLayer(layer_boundary_administrative_palayancity_3);
-
-        // ── Difference_5: outside-city mask ──────────────────────────
-        map.createPane('pane_Difference_5');
-        map.getPane('pane_Difference_5').style.zIndex = 405;
-        map.getPane('pane_Difference_5').style['mix-blend-mode'] = 'normal';
-        map.getPane('pane_Difference_5').style['pointer-events'] = 'none';
-        var layer_Difference_5 = new L.geoJson(json_Difference_5, {
-            attribution: '', interactive: false,
-            pane: 'pane_Difference_5',
+            dataVar: 'json_boundary_administrative_palayancity_1',
+            layerName: 'layer_boundary_administrative_palayancity_1',
+            pane: 'pane_boundary_administrative_palayancity_1',
+            onEachFeature: pop_boundary_administrative_palayancity_1,
             style: function() {
                 return {
-                    pane: 'pane_Difference_5',
-                    stroke: false,
-                    fill: true,
-                    fillOpacity: 1, 
-                    fillColor: '#0b1320', /* CHANGED: Matches the WordPress site's dark navy background */
+                    pane: 'pane_boundary_administrative_palayancity_1',
+                    opacity: 1,
+                    color: 'rgba(233,172,9,0.8)',   /* gold border to match brand */
+                    dashArray: '6 3',
+                    lineCap: 'round', lineJoin: 'round',
+                    weight: 2,
+                    fillOpacity: 0,
                     interactive: false,
                 };
-            },
+            }
         });
-        bounds_group.addLayer(layer_Difference_5);
-        map.addLayer(layer_Difference_5);
+        bounds_group.addLayer(layer_boundary_administrative_palayancity_1);
+        map.addLayer(layer_boundary_administrative_palayancity_1);
 
-        // ── Hotel custom SVG pin icon ──────────────────────────────────────
-        function createHotelIcon() {
-            var svg =
-                '<svg xmlns="http://www.w3.org/2000/svg" width="38" height="46" viewBox="0 0 38 46">' +
-                '<defs>' +
-                  '<filter id="ds" x="-50%" y="-30%" width="200%" height="200%">' +
-                    '<feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="rgba(0,0,0,0.32)"/>' +
-                  '</filter>' +
-                  '<linearGradient id="pg" x1="0%" y1="0%" x2="100%" y2="100%">' +
-                    '<stop offset="0%" stop-color="#ff6b6b"/>' +
-                    '<stop offset="100%" stop-color="#c0392b"/>' +
-                  '</linearGradient>' +
-                '</defs>' +
-                '<path d="M19 2C10.716 2 4 8.716 4 17c0 11 15 27 15 27S34 28 34 17C34 8.716 27.284 2 19 2z"' +
-                '      fill="url(#pg)" filter="url(#ds)"/>' +
-                '<circle cx="19" cy="17" r="10" fill="white" opacity="0.97"/>' +
-                '<text x="19" y="22" text-anchor="middle" font-family="Arial,sans-serif"' +
-                '      font-size="13" font-weight="900" fill="#c0392b">H</text>' +
-                '</svg>';
-            return L.divIcon({
-                html: '<div style="position:relative;width:38px;height:46px;">' +
-                      '<div style="position:absolute;top:3px;left:3px;width:32px;height:32px;' +
-                           'border-radius:50%;background:rgba(231,76,60,0.28);' +
-                           'animation:hotelPulse 2s ease-out infinite;"></div>' +
-                      svg + '</div>',
-                className: '',
-                iconSize:    [38, 46],
-                iconAnchor:  [19, 46],
-                popupAnchor: [0, -50]
+        /* ── DIFFERENCE (dark mask outside city boundary) ── */
+        function pop_Difference_2(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup === 'function') layer.closePopup();
+                    else layer.eachLayer(function(f) { f.closePopup(); });
+                },
+                mouseover: highlightFeature,
             });
+            layer.bindPopup('', { maxHeight: 400 });
         }
-
-        // ── Hotel popup (click only, no hover) ────────────────────────────
-        function pop_Hotels_6(feature, layer) {
-            var p = feature.properties;
-            var name    = (p['Bname']    != null) ? String(p['Bname'])    : 'Hotel';
-            var caption = (p['Bcaption'] != null) ? String(p['Bcaption']) : '';
-            var desc    = (p['Bdesc']    != null) ? String(p['Bdesc'])    : '';
-            var link    = (p['Blink']    != null) ? String(p['Blink'])    : null;
-            var photo   = (p['Bphoto']   != null) ? String(p['Bphoto'])   : null;
-
-            var imgHtml = photo
-                ? '<img style="width:100%;height:155px;object-fit:cover;display:block;" ' +
-                  'src="images/' + photo.replace(/[\\/:]/g, '_').trim().replace(/"/g, '&quot;') + '" ' +
-                  'alt="' + name.replace(/"/g, '&quot;') + '" ' +
-                  'onerror="this.outerHTML=\'<div style=&quot;width:100%;height:90px;background:linear-gradient(135deg,#e74c3c,#c0392b);display:flex;align-items:center;justify-content:center;font-size:38px;&quot;>🏨</div>\'">'
-                : '<div style="width:100%;height:90px;background:linear-gradient(135deg,#e74c3c,#c0392b);display:flex;align-items:center;justify-content:center;font-size:38px;">🏨</div>';
-
-            var html =
-                '<div style="font-family:Inter,Segoe UI,sans-serif;width:270px;">' +
-                imgHtml +
-                '<div style="padding:13px 15px 15px;">' +
-                  '<span style="display:inline-block;background:#fff0ee;color:#e74c3c;font-size:10px;' +
-                               'font-weight:700;text-transform:uppercase;letter-spacing:.8px;' +
-                               'padding:3px 9px;border-radius:20px;margin-bottom:8px;">' +
-                    (caption || 'Hotel &amp; Accommodation') +
-                  '</span>' +
-                  '<div style="font-size:16px;font-weight:700;color:#1a1a2e;margin:0 0 6px;line-height:1.3;">' + name + '</div>' +
-                  (desc ? '<div style="font-size:12px;color:#666;line-height:1.55;margin:0 0 12px;">' + desc + '</div>' : '') +
-                  (link ? '<a href="' + link + '" target="_blank" rel="noopener" ' +
-                               'style="display:block;text-align:center;background:linear-gradient(135deg,#e74c3c,#c0392b);' +
-                               'color:#fff;text-decoration:none;font-size:12px;font-weight:600;' +
-                               'padding:10px 16px;border-radius:9px;letter-spacing:.3px;">🔗 Visit Website</a>' : '') +
-                '</div></div>';
-
-            // CLICK only — no mouseover trigger
-            layer.bindPopup(html, { maxWidth: 300, maxHeight: 500 });
-        }
-
-        // ── Hotels GeoJSON layer ───────────────────────────────────────────
-        map.createPane('pane_Hotels_6');
-        map.getPane('pane_Hotels_6').style.zIndex = 406;
-        map.getPane('pane_Hotels_6').style['mix-blend-mode'] = 'normal';
-        var layer_Hotels_6 = new L.geoJson(json_Hotels_6, {
-            attribution: '', interactive: true,
-            pane: 'pane_Hotels_6',
-            onEachFeature: pop_Hotels_6,
-            pointToLayer: function(feature, latlng) {
-                return L.marker(latlng, { icon: createHotelIcon() });
-            },
+        map.createPane('pane_Difference_2');
+        map.getPane('pane_Difference_2').style.zIndex = 402;
+        map.getPane('pane_Difference_2').style['mix-blend-mode'] = 'normal';
+        var layer_Difference_2 = new L.geoJson(json_Difference_2, {
+            attribution: '', interactive: false,
+            dataVar: 'json_Difference_2',
+            layerName: 'layer_Difference_2',
+            pane: 'pane_Difference_2',
+            onEachFeature: pop_Difference_2,
+            style: function() {
+                return {
+                    pane: 'pane_Difference_2',
+                    opacity: 0,
+                    color: 'transparent',
+                    weight: 0,
+                    fill: true,
+                    fillOpacity: 0.82,
+                    fillColor: '#020b1a',   /* DARK BLUE-BLACK mask */
+                    interactive: false,
+                };
+            }
         });
-        bounds_group.addLayer(layer_Hotels_6);
-        map.addLayer(layer_Hotels_6);
+        bounds_group.addLayer(layer_Difference_2);
+        map.addLayer(layer_Difference_2);
 
-        // ── Layer control ──────────────────────────────────────────────────
-        var baseMaps = {
-            '🗺️ Google Maps':              layer_GoogleMaps_0,
-            '🛰️ Google Satellite Hybrid':  layer_GoogleSatelliteHybrid_1,
-            '📷 Google Satellite':          layer_GoogleSatellite_2,
-        };
-        var overlayMaps = {
-            '🏨 Hotels':          layer_Hotels_6,
-            '📍 Admin Boundary':  layer_boundary_administrative_palayancity_3,
-        };
-        L.control.layers(baseMaps, overlayMaps, {
-            collapsed: true,
-            position: 'topright'
-        }).addTo(map);
+        /* ============================================================
+           GENERIC LAYER FACTORY
+           Creates a geoJson layer with branded divIcon markers and
+           styled popups for any category config entry.
+        ============================================================ */
+        function pmBuildPopup(feature, cat) {
+            var props = feature.properties;
+            var name    = props['Bname']    ? String(props['Bname'])    : '';
+            var caption = props['Bcaption'] ? String(props['Bcaption']) : '';
+            var desc    = props['Bdesc']    ? String(props['Bdesc'])    : '';
+            var link    = props['Blink']    ? String(props['Blink'])    : '';
+            var photo   = props['Bphotos'] || props['Bphoto'] || '';
+            var author  = props['Bauthors'] || props['Bauthor'] || '';
+
+            var html = '<div class="pm-popup">';
+            html += '<div class="pm-popup-header">';
+            html += '<div class="pm-popup-icon" style="background:' + cat.iconBg + ';color:' + cat.pinColor + '">';
+            html += '<i class="fas ' + cat.icon + '"></i></div>';
+            html += '<div><span class="pm-popup-cat">' + cat.label + '</span>';
+            html += '<div class="pm-popup-name">' + (name || cat.label) + '</div></div>';
+            html += '</div>';
+
+            if (photo) {
+                html += '<img class="pm-popup-img" src="images/' +
+                    String(photo).replace(/[\\/:]/g,'_').trim() +
+                    '" onerror="this.style.display=\'none\'">';
+            }
+
+            html += '<div class="pm-popup-body">';
+            if (caption) html += '<div class="pm-popup-row"><i class="fas fa-quote-left"></i><span>' + caption + '</span></div>';
+            if (desc)    html += '<div class="pm-popup-row"><i class="fas fa-info-circle"></i><span>' + desc + '</span></div>';
+            if (link)    html += '<div class="pm-popup-row"><i class="fas fa-link"></i><span>' + autolinker.link(link) + '</span></div>';
+            if (author)  html += '<div class="pm-popup-row"><i class="fas fa-camera"></i><span>' + author + '</span></div>';
+            html += '</div></div>';
+            return html;
+        }
+
+        function pmBuildLayer(jsonData, cat, paneZIndex) {
+            var paneName = 'pane_' + cat.key;
+            map.createPane(paneName);
+            map.getPane(paneName).style.zIndex = paneZIndex;
+            map.getPane(paneName).style['mix-blend-mode'] = 'normal';
+
+            var icon = pmMakeIcon(cat);
+
+            var lyr = L.geoJson(jsonData, {
+                attribution: '', interactive: true,
+                dataVar: 'json_' + cat.key,
+                layerName: 'layer_' + cat.key,
+                pane: paneName,
+                pointToLayer: function(feature, latlng) {
+                    return L.marker(latlng, { icon: icon, pane: paneName });
+                },
+                onEachFeature: function(feature, layer) {
+                    layer.on({
+                        mouseout: function() {
+                            if (typeof layer.closePopup === 'function') layer.closePopup();
+                        },
+                        click: function() { layer.openPopup(); }
+                    });
+                    var content = pmBuildPopup(feature, cat);
+                    layer.on('popupopen', function(e) { addClassToPopupIfMedia(content, e.popup); });
+                    layer.bindPopup(content, { maxHeight: 500, maxWidth: 320 });
+                },
+            });
+            bounds_group.addLayer(lyr);
+            map.addLayer(lyr);
+            return lyr;
+        }
+
+        /* Build all 12 category layers in z-index order */
+        var pmLayers = {};
+        var baseZ = 403;
+        PM_CATS.forEach(function(cat, idx) {
+            var dataVar = window['json_' + cat.key];
+            if (dataVar) {
+                pmLayers[cat.key] = pmBuildLayer(dataVar, cat, baseZ + idx);
+            }
+        });
+
+        /* ── Leaf layer tree (hidden — only used for legacy compat) ── */
+        var overlaysTree = [
+            { label: '<b>Tourism</b>', collapsed: true, selectAllCheckbox: true, children:
+                PM_CATS.map(function(c) {
+                    return { label: c.label, layer: pmLayers[c.key] };
+                })
+            },
+            { label: '<b>Base Maps</b>', collapsed: true, children: [
+                { label: 'Google Satellite', layer: layer_GoogleSatellite_0 }
+            ]}
+        ];
+        var lay = L.control.layers.tree(null, overlaysTree, { collapsed: false });
+        lay.addTo(map);
+
+        /* ============================================================
+           CUSTOM FILTER PANEL — build rows
+        ============================================================ */
+        var filterBody = document.getElementById('pm-filter-body');
+        var catStates  = {};
+
+        PM_CATS.forEach(function(cat) {
+            catStates[cat.key] = true;
+            var row = document.createElement('div');
+            row.className = 'pm-cat-row active';
+            row.dataset.key = cat.key;
+            row.innerHTML =
+                '<div class="pm-cat-icon" style="background:' + cat.iconBg + ';color:' + cat.pinColor + '">' +
+                    '<i class="fas ' + cat.icon + '"></i>' +
+                '</div>' +
+                '<span class="pm-cat-label">' + cat.label + '</span>' +
+                '<div class="pm-cat-check"><i class="fas fa-check"></i></div>';
+
+            row.addEventListener('click', function() {
+                var key = this.dataset.key;
+                catStates[key] = !catStates[key];
+                if (catStates[key]) {
+                    if (pmLayers[key]) map.addLayer(pmLayers[key]);
+                    this.classList.remove('inactive');
+                    this.classList.add('active');
+                } else {
+                    if (pmLayers[key]) map.removeLayer(pmLayers[key]);
+                    this.classList.remove('active');
+                    this.classList.add('inactive');
+                }
+                updateToggleAllLabel();
+            });
+            filterBody.appendChild(row);
+        });
+
+        function updateToggleAllLabel() {
+            var allOn = Object.keys(catStates).every(function(k) { return catStates[k]; });
+            document.getElementById('pm-filter-toggle-all').textContent = allOn ? 'All Off' : 'All On';
+        }
+        updateToggleAllLabel();
+
+        document.getElementById('pm-filter-toggle-all').addEventListener('click', function() {
+            var allOn = Object.keys(catStates).every(function(k) { return catStates[k]; });
+            var rows = filterBody.querySelectorAll('.pm-cat-row');
+            rows.forEach(function(row) {
+                var key = row.dataset.key;
+                catStates[key] = !allOn;
+                if (!allOn) {
+                    if (pmLayers[key]) map.addLayer(pmLayers[key]);
+                    row.classList.remove('inactive'); row.classList.add('active');
+                } else {
+                    if (pmLayers[key]) map.removeLayer(pmLayers[key]);
+                    row.classList.remove('active'); row.classList.add('inactive');
+                }
+            });
+            this.textContent = allOn ? 'All On' : 'All Off';
+        });
+
+        /* Filter panel collapse */
+        var filterPanel = document.getElementById('pm-filter');
+        document.getElementById('pm-filter-collapse').addEventListener('click', function() {
+            filterPanel.classList.toggle('collapsed');
+            var icon = this.querySelector('i');
+            if (filterPanel.classList.contains('collapsed')) {
+                icon.className = 'fas fa-layer-group';
+                this.title = 'Show filters';
+            } else {
+                icon.className = 'fas fa-times';
+                this.title = 'Hide filters';
+            }
+        });
+
+        /* ============================================================
+           LAYER PANEL HEIGHT (legacy qgis2web compat)
+        ============================================================ */
+        document.addEventListener('DOMContentLoaded', function() {
+            function newLayersListHeight() {
+                var el = document.querySelector('.leaflet-control-layers-scrollbar');
+                if (el) {
+                    var list = document.querySelector('.leaflet-control-layers-list');
+                    var h = parseFloat(list.style.height || window.getComputedStyle(list).height);
+                    list.style.height = (h - 50) + 'px';
+                }
+            }
+            var expanded = true;
+            var ctrl   = document.querySelector('.leaflet-control-layers');
+            var toggle = document.querySelector('.leaflet-control-layers-toggle');
+            if (toggle) {
+                toggle.addEventListener('click', function() {
+                    if (expanded) ctrl.classList.remove('leaflet-control-layers-expanded');
+                    else          ctrl.classList.add('leaflet-control-layers-expanded');
+                    expanded = !expanded;
+                    newLayersListHeight();
+                });
+            }
+            setTimeout(function() { if (toggle) toggle.click(); }, 10);
+            setTimeout(function() { if (toggle) toggle.click(); }, 20);
+            if (window.innerWidth < 650) {
+                setTimeout(function() {
+                    if (ctrl) ctrl.classList.remove('leaflet-control-layers-expanded');
+                }, 500);
+            }
+        });
 
         setBounds();
         </script>
