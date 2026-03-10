@@ -674,16 +674,20 @@
            Creates a geoJson layer with branded divIcon markers and
            styled popups for any category config entry.
         ============================================================ */
-        function pmBuildPopup(feature, cat) {
+       function pmBuildPopup(feature, cat) {
             var props = feature.properties;
             var name    = props['Bname']    ? String(props['Bname'])    : '';
             var caption = props['Bcaption'] ? String(props['Bcaption']) : '';
             var desc    = props['Bdesc']    ? String(props['Bdesc'])    : '';
             var link    = props['Blink']    ? String(props['Blink'])    : '';
-            var photo   = props['Bphotos'] || props['Bphoto'] || '';
-            var author  = props['Bauthors'] || props['Bauthor'] || '';
+            
+            // Strictly check for the Bphoto property from your QGIS attribute table
+            var photo   = props['Bphoto']   ? String(props['Bphoto'])   : '';
+            var author  = props['Bauthor']  ? String(props['Bauthor'])  : '';
 
             var html = '<div class="pm-popup">';
+            
+            // 1. Popup Header
             html += '<div class="pm-popup-header">';
             html += '<div class="pm-popup-icon" style="background:' + cat.iconBg + ';color:' + cat.pinColor + '">';
             html += '<i class="fas ' + cat.icon + '"></i></div>';
@@ -691,18 +695,20 @@
             html += '<div class="pm-popup-name">' + (name || cat.label) + '</div></div>';
             html += '</div>';
 
-            if (photo) {
-                html += '<img class="pm-popup-img" src="images/' +
-                    String(photo).replace(/[\\/:]/g,'_').trim() +
-                    '" onerror="this.style.display=\'none\'">';
+            // 2. The Image! (Removed the silent error hider so we can debug broken paths)
+            if (photo && photo !== "null" && photo !== "") {
+                var cleanPhotoName = photo.replace(/[\\/:]/g,'_').trim();
+                html += '<img class="pm-popup-img" src="images/' + cleanPhotoName + '" alt="Establishment Photo" style="width:100%; height:160px; object-fit:cover; display:block; background-color:#1a2433;">';
             }
 
+            // 3. Popup Details
             html += '<div class="pm-popup-body">';
-            if (caption) html += '<div class="pm-popup-row"><i class="fas fa-quote-left"></i><span>' + caption + '</span></div>';
-            if (desc)    html += '<div class="pm-popup-row"><i class="fas fa-info-circle"></i><span>' + desc + '</span></div>';
-            if (link)    html += '<div class="pm-popup-row"><i class="fas fa-link"></i><span>' + autolinker.link(link) + '</span></div>';
-            if (author)  html += '<div class="pm-popup-row"><i class="fas fa-camera"></i><span>' + author + '</span></div>';
+            if (caption && caption !== "null") html += '<div class="pm-popup-row"><i class="fas fa-quote-left"></i><span>' + caption + '</span></div>';
+            if (desc && desc !== "null")       html += '<div class="pm-popup-row"><i class="fas fa-info-circle"></i><span>' + desc + '</span></div>';
+            if (link && link !== "null")       html += '<div class="pm-popup-row"><i class="fas fa-link"></i><span><a href="' + link + '" target="_blank" style="color:var(--pt-gold);">Visit Website</a></span></div>';
+            if (author && author !== "null")   html += '<div class="pm-popup-row"><i class="fas fa-camera"></i><span>Photo by ' + author + '</span></div>';
             html += '</div></div>';
+            
             return html;
         }
 
@@ -722,15 +728,14 @@
                 pointToLayer: function(feature, latlng) {
                     return L.marker(latlng, { icon: icon, pane: paneName });
                 },
-                onEachFeature: function(feature, layer) {
-                    layer.on({
-                        mouseout: function() {
-                            if (typeof layer.closePopup === 'function') layer.closePopup();
-                        },
-                        click: function() { layer.openPopup(); }
-                    });
+               onEachFeature: function(feature, layer) {
+                    // 1. Build the custom popup HTML
                     var content = pmBuildPopup(feature, cat);
+                    
+                    // 2. Format media if there are images
                     layer.on('popupopen', function(e) { addClassToPopupIfMedia(content, e.popup); });
+                    
+                    // 3. Bind popup (Leaflet automatically handles the 'click to open' action!)
                     layer.bindPopup(content, { maxHeight: 500, maxWidth: 320 });
                 },
             });
